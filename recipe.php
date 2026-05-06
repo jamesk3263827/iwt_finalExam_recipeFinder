@@ -1,7 +1,10 @@
 <?php include 'includes/header.php'; ?>
 
 <main>
-    <h1>Recipe</h1>
+
+    <!-- JS injects the full recipe into this div -->
+    <div id="recipe-output"></div>
+
 </main>
 
 <?php include 'includes/footer.php'; ?>

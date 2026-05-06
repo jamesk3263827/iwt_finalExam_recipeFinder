@@ -85,7 +85,7 @@ loadCategories();
 // Search Page
 // ===========================
 // On search.php, reads URL parameters to determine what to search for,
-// pre-fills the form, and fetches results from server/search.php.
+// pre-fills the form, and fetches results from server/servSearch.php.
 // Handles three entry points:
 //   ?category=Seafood          — clicked a category card on the homepage
 //   ?i1=chicken&i2=&i3=        — submitted the ingredient form on the homepage
@@ -97,8 +97,8 @@ function runSearch() {
     // Only run on pages that have the results grid
     if (!resultsGrid) return;
 
-    const params   = new URLSearchParams(window.location.search);
-    const input    = document.getElementById('search-input');
+    const params     = new URLSearchParams(window.location.search);
+    const input      = document.getElementById('search-input');
     const typeSelect = document.getElementById('search-type');
 
     let term = '';
@@ -113,7 +113,6 @@ function runSearch() {
 
     } else if (params.has('i1') || params.has('i2') || params.has('i3')) {
         // Arrived from the ingredient form on the homepage.
-        // Combine any non-empty ingredients into a comma-separated string.
         // MealDB filter.php only supports one ingredient at a time, so we
         // use the first non-empty value and search by ingredient.
         const i1 = (params.get('i1') || '').trim();
@@ -185,3 +184,111 @@ function runSearch() {
 
 // Run on page load
 runSearch();
+
+
+// ===========================
+// Recipe Page
+// ===========================
+// On recipe.php, reads the ?id= URL parameter, fetches the full meal
+// from server/get_recipe.php, and builds the recipe layout into
+// #recipe-output.
+
+function loadRecipe() {
+    const output = document.getElementById('recipe-output');
+
+    // Only run on pages that have the recipe output div
+    if (!output) return;
+
+    const params = new URLSearchParams(window.location.search);
+    const id     = params.get('id');
+
+    // No ID in the URL — show a friendly message instead of a blank page
+    if (!id) {
+        output.innerHTML = '<p class="load-error">No recipe selected. <a href="index.php">Go back home</a>.</p>';
+        return;
+    }
+
+    // Show a loading message while the fetch is in flight
+    output.innerHTML = '<p class="loading-msg">Loading recipe…</p>';
+
+    fetch('server/get_recipe.php?id=' + encodeURIComponent(id))
+        .then(function (response) {
+            return response.json();
+        })
+        .then(function (data) {
+            // Server-side error (bad ID, API down, etc.)
+            if (data.error) {
+                output.innerHTML = '<p class="load-error">' + data.error + ' <a href="index.php">Go back home</a>.</p>';
+                return;
+            }
+
+            // --- Build the recipe layout ---
+
+            // Meal name
+            const title = document.createElement('h1');
+            title.textContent = data.strMeal;
+
+            // Metadata: category and area/cuisine
+            const meta = document.createElement('p');
+            meta.className   = 'recipe-meta';
+            meta.textContent = data.strCategory + ' · ' + data.strArea;
+
+            // Meal image
+            const img = document.createElement('img');
+            img.src       = data.strMealThumb;
+            img.alt       = data.strMeal;
+            img.className = 'recipe-img';
+
+            // Ingredients heading + list
+            const ingHeading = document.createElement('h2');
+            ingHeading.textContent = 'Ingredients';
+
+            const ul = document.createElement('ul');
+            ul.className = 'recipe-ingredients';
+
+            data.ingredients.forEach(function (item) {
+                const li = document.createElement('li');
+                // Show measure alongside ingredient when available (e.g. "2 tbsp Olive Oil")
+                li.textContent = item.measure
+                    ? item.measure + ' ' + item.ingredient
+                    : item.ingredient;
+                ul.appendChild(li);
+            });
+
+            // Instructions heading + paragraph block
+            const instrHeading = document.createElement('h2');
+            instrHeading.textContent = 'Instructions';
+
+            const instructions = document.createElement('div');
+            instructions.className = 'recipe-instructions';
+
+            // MealDB instructions use \r\n line breaks — split into paragraphs
+            // so the text is easier to read than one long block.
+            const steps = data.strInstructions
+                .split(/\r?\n/)
+                .map(function (s) { return s.trim(); })
+                .filter(function (s) { return s.length > 0; });
+
+            steps.forEach(function (step) {
+                const p = document.createElement('p');
+                p.textContent = step;
+                instructions.appendChild(p);
+            });
+
+            // --- Assemble and inject ---
+            output.innerHTML = '';
+            output.appendChild(title);
+            output.appendChild(meta);
+            output.appendChild(img);
+            output.appendChild(ingHeading);
+            output.appendChild(ul);
+            output.appendChild(instrHeading);
+            output.appendChild(instructions);
+        })
+        .catch(function () {
+            output.innerHTML = '<p class="load-error">Something went wrong loading this recipe. Please try again.</p>';
+        });
+}
+
+// Run on page load
+loadRecipe();
