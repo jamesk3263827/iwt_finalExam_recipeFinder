@@ -79,3 +79,109 @@ function loadCategories() {
 
 // Run on page load
 loadCategories();
+
+
+// ===========================
+// Search Page
+// ===========================
+// On search.php, reads URL parameters to determine what to search for,
+// pre-fills the form, and fetches results from server/search.php.
+// Handles three entry points:
+//   ?category=Seafood          — clicked a category card on the homepage
+//   ?i1=chicken&i2=&i3=        — submitted the ingredient form on the homepage
+//   ?q=curry&type=name         — submitted the search form on this page directly
+
+function runSearch() {
+    const resultsGrid = document.getElementById('results-grid');
+
+    // Only run on pages that have the results grid
+    if (!resultsGrid) return;
+
+    const params   = new URLSearchParams(window.location.search);
+    const input    = document.getElementById('search-input');
+    const typeSelect = document.getElementById('search-type');
+
+    let term = '';
+    let type = 'ingredient';
+
+    // --- Determine where the request came from and set term + type ---
+
+    if (params.has('category')) {
+        // Arrived from a category card click on the homepage
+        term = params.get('category');
+        type = 'category';
+
+    } else if (params.has('i1') || params.has('i2') || params.has('i3')) {
+        // Arrived from the ingredient form on the homepage.
+        // Combine any non-empty ingredients into a comma-separated string.
+        // MealDB filter.php only supports one ingredient at a time, so we
+        // use the first non-empty value and search by ingredient.
+        const i1 = (params.get('i1') || '').trim();
+        const i2 = (params.get('i2') || '').trim();
+        const i3 = (params.get('i3') || '').trim();
+        term = i1 || i2 || i3;   // first non-empty value
+        type = 'ingredient';
+
+    } else if (params.has('q')) {
+        // Arrived from the search form on this page
+        term = params.get('q').trim();
+        type = params.get('type') || 'ingredient';
+    }
+
+    // Nothing to search — leave the results area empty and wait
+    if (term === '') return;
+
+    // Pre-fill the form so the user can see what was searched
+    if (input)      input.value = term;
+    if (typeSelect) typeSelect.value = type;
+
+    // Show a loading message while fetching
+    resultsGrid.innerHTML = '<p class="loading-msg">Searching…</p>';
+
+    // Build the fetch URL pointing to the server-side PHP file
+    const fetchURL = 'server/servSearch.php?q=' + encodeURIComponent(term) + '&type=' + encodeURIComponent(type);
+
+    fetch(fetchURL)
+        .then(function (response) {
+            return response.json();
+        })
+        .then(function (data) {
+            resultsGrid.innerHTML = '';
+
+            // Server-side error (API unreachable, missing term, etc.)
+            if (data.error) {
+                resultsGrid.innerHTML = '<p class="load-error">' + data.error + '</p>';
+                return;
+            }
+
+            // No matches found
+            if (!data.meals || data.meals.length === 0) {
+                resultsGrid.innerHTML = '<p class="no-results">No recipes found for <strong>' + term + '</strong>. Try a different search.</p>';
+                return;
+            }
+
+            // Build one result card per meal
+            data.meals.forEach(function (meal) {
+                const card = document.createElement('a');
+                card.href      = 'recipe.php?id=' + encodeURIComponent(meal.idMeal);
+                card.className = 'result-card';
+
+                const img = document.createElement('img');
+                img.src = meal.strMealThumb;
+                img.alt = meal.strMeal;
+
+                const name = document.createElement('span');
+                name.textContent = meal.strMeal;
+
+                card.appendChild(img);
+                card.appendChild(name);
+                resultsGrid.appendChild(card);
+            });
+        })
+        .catch(function () {
+            resultsGrid.innerHTML = '<p class="load-error">Something went wrong. Please try again.</p>';
+        });
+}
+
+// Run on page load
+runSearch();
