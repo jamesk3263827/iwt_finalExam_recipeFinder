@@ -28,6 +28,15 @@
         </form>
     </section>
 
+    <!-- Category Grid -->
+    <section class="category-section">
+        <h2>Browse by Category</h2>
+        <p>Click any category below to see all recipes in that group.</p>
+
+        <!-- JS injects category cards here -->
+        <div id="category-grid"></div>
+    </section>
+
 </main>
 
 <?php include 'includes/footer.php'; ?>
