@@ -10,10 +10,10 @@
 
 <header>
     <nav>
-        <a href="/index.php" class="nav-logo">🍽️ Recipe Finder</a>
+        <a href="index.php" class="nav-logo">🍽️ Recipe Finder</a>
         <ul>
-            <li><a href="/index.php">Home</a></li>
-            <li><a href="/search.php">Search</a></li>
+            <li><a href="index.php">Home</a></li>
+            <li><a href="search.php">Search</a></li>
         </ul>
     </nav>
 </header>

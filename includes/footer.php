@@ -6,6 +6,5 @@
     <p>Recipe data provided by <a href="https://www.themealdb.com" target="_blank">TheMealDB</a> — free recipe API.</p>
 </footer>
 
-<script src="js/script.js"></script>
 </body>
 </html>

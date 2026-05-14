@@ -3,28 +3,27 @@
 <main>
     <h1>Welcome to Recipe Finder</h1>
 
-    <!-- Ingredient Search Form -->
+    <!-- Homepage Search Form -->
     <section class="ingredient-search">
-        <h2>Search by Ingredient</h2>
-        <p>Enter up to three ingredients to find matching recipes.</p>
+        <h2>Find a Recipe</h2>
+        <p>Search by ingredient, category, or meal name.</p>
 
-        <form id="ingredient-form" action="search.php" method="GET">
-            <div class="form-group">
-                <label for="ingredient1">Ingredient 1</label>
-                <input type="text" id="ingredient1" name="i1" placeholder="e.g. chicken">
+        <form id="home-search-form" action="search.php" method="GET">
+            <div class="search-row">
+                <input
+                    type="text"
+                    id="search-input-home"
+                    name="q"
+                    placeholder="e.g. chicken, garlic, Seafood…"
+                >
+                <select id="search-type-home" name="type">
+                    <option value="ingredient">By Ingredient</option>
+                    <option value="category">By Category</option>
+                    <option value="name">By Name</option>
+                </select>
+                <button type="submit" id="searchButtonHome">Search</button>
             </div>
-            <div class="form-group">
-                <label for="ingredient2">Ingredient 2</label>
-                <input type="text" id="ingredient2" name="i2" placeholder="e.g. garlic">
-            </div>
-            <div class="form-group">
-                <label for="ingredient3">Ingredient 3</label>
-                <input type="text" id="ingredient3" name="i3" placeholder="e.g. tomato">
-            </div>
-
-            <p id="form-error" class="form-error" aria-live="polite"></p>
-
-            <button type="submit">Find Recipes</button>
+            <p id="form-error-home" class="form-error"></p>
         </form>
     </section>
 
@@ -38,5 +37,5 @@
     </section>
 
 </main>
-
+<script src="js/index.js"></script>
 <?php include 'includes/footer.php'; ?>

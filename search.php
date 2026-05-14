@@ -11,7 +11,7 @@
                     type="text"
                     id="search-input"
                     name="q"
-                    placeholder="e.g. chicken, curry, Seafood…"
+                    placeholder="e.g. chicken, garlic, Seafood…"
                     required
                 >
                 <select id="search-type" name="type">
@@ -19,8 +19,9 @@
                     <option value="category">By Category</option>
                     <option value="name">By Name</option>
                 </select>
-                <button type="submit">Search</button>
+                <button type="submit" id="searchButton">Search</button>
             </div>
+            <p id="form-error" class="form-error"></p>
         </form>
     </section>
 
@@ -30,5 +31,5 @@
     </section>
 
 </main>
-
+<script src="js/search.js"></script>
 <?php include 'includes/footer.php'; ?>

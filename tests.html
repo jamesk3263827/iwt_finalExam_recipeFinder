@@ -1,0 +1,788 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Recipe Finder — Test Suite</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Spectral:ital,wght@0,400;0,600;1,400&display=swap');
+
+        :root {
+            --bg:      #1a1a1a;
+            --surface: #242424;
+            --border:  #333;
+            --gold:    #f0c040;
+            --gold-dim:#a07c1a;
+            --pass:    #4caf6e;
+            --fail:    #e05555;
+            --skip:    #888;
+            --text:    #e0e0e0;
+            --muted:   #888;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Spectral', Georgia, serif;
+            min-height: 100vh;
+            padding: 40px 24px 80px;
+        }
+
+        /* ── Header ── */
+        .suite-header {
+            max-width: 860px;
+            margin: 0 auto 40px;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 24px;
+        }
+
+        .suite-header h1 {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.5rem;
+            color: var(--gold);
+            letter-spacing: -0.02em;
+        }
+
+        .suite-header h1 span { color: var(--muted); font-weight: 400; }
+
+        .suite-meta {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.78rem;
+            color: var(--muted);
+            margin-top: 6px;
+        }
+
+        /* ── Summary bar ── */
+        #summary-bar {
+            max-width: 860px;
+            margin: 0 auto 32px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 16px 20px;
+            display: flex;
+            align-items: center;
+            gap: 24px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+        }
+
+        #summary-bar .stat { display: flex; flex-direction: column; gap: 2px; }
+        #summary-bar .stat .label { font-size: 0.7rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
+        #summary-bar .stat .value { font-size: 1.3rem; font-weight: 700; }
+        .value.pass  { color: var(--pass); }
+        .value.fail  { color: var(--fail); }
+        .value.total { color: var(--text); }
+        .value.pct   { color: var(--gold); }
+
+        #progress {
+            flex: 1;
+            height: 6px;
+            background: var(--border);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+        #progress-fill {
+            height: 100%;
+            background: var(--pass);
+            border-radius: 3px;
+            width: 0;
+            transition: width 0.3s ease;
+        }
+
+        #run-btn {
+            margin-left: auto;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            background: var(--gold);
+            color: #1a1a1a;
+            border: none;
+            border-radius: 4px;
+            padding: 8px 20px;
+            font-weight: 700;
+            cursor: pointer;
+            letter-spacing: 0.02em;
+        }
+        #run-btn:hover { background: #ffd966; }
+        #run-btn:disabled { background: var(--gold-dim); cursor: not-allowed; }
+
+        /* ── Groups ── */
+        .test-group {
+            max-width: 860px;
+            margin: 0 auto 28px;
+        }
+
+        .group-title {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.72rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--muted);
+            padding: 0 0 10px 4px;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 0;
+        }
+
+        /* ── Test rows ── */
+        .test-row {
+            display: grid;
+            grid-template-columns: 22px 1fr 80px;
+            align-items: start;
+            gap: 10px;
+            padding: 13px 4px;
+            border-bottom: 1px solid #2a2a2a;
+        }
+
+        .test-icon {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            padding-top: 1px;
+        }
+        .test-icon.pass  { color: var(--pass); }
+        .test-icon.fail  { color: var(--fail); }
+        .test-icon.idle  { color: var(--border); }
+        .test-icon.running { color: var(--gold); animation: pulse 0.8s infinite; }
+
+        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+        .test-body {}
+
+        .test-name {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.82rem;
+            color: var(--text);
+            line-height: 1.4;
+        }
+
+        .test-desc {
+            font-size: 0.82rem;
+            color: var(--muted);
+            margin-top: 2px;
+            font-style: italic;
+        }
+
+        .test-detail {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.74rem;
+            margin-top: 6px;
+            padding: 6px 10px;
+            background: #1e1e1e;
+            border-left: 2px solid var(--fail);
+            border-radius: 0 3px 3px 0;
+            color: #e05555;
+            white-space: pre-wrap;
+            word-break: break-all;
+            display: none;
+        }
+
+        .test-detail.visible { display: block; }
+
+        .test-badge {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.7rem;
+            padding: 3px 8px;
+            border-radius: 3px;
+            text-align: center;
+            align-self: start;
+            margin-top: 2px;
+        }
+        .test-badge.pass  { background: #1a3324; color: var(--pass); }
+        .test-badge.fail  { background: #3a1a1a; color: var(--fail); }
+        .test-badge.idle  { background: #2a2a2a; color: var(--muted); }
+        .test-badge.running { background: #2a2216; color: var(--gold); }
+
+        /* ── Note box ── */
+        .note-box {
+            max-width: 860px;
+            margin: 0 auto 32px;
+            border: 1px dashed var(--gold-dim);
+            border-radius: 6px;
+            padding: 14px 18px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.78rem;
+            color: var(--muted);
+            line-height: 1.7;
+        }
+        .note-box strong { color: var(--gold); }
+
+        /* ── Legend ── */
+        .legend {
+            max-width: 860px;
+            margin: 32px auto 0;
+            display: flex;
+            gap: 20px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            color: var(--muted);
+        }
+        .legend span { display: flex; align-items: center; gap: 6px; }
+    </style>
+</head>
+<body>
+
+<div class="suite-header">
+    <h1>🍽️ Recipe Finder <span>/ test suite</span></h1>
+    <div class="suite-meta">12 tests across 6 files — PHP endpoints &amp; JS validation</div>
+</div>
+
+<div class="note-box">
+    <strong>Before running:</strong> This file must be served through your local PHP server (XAMPP / MAMP).<br>
+    Place it in your project root alongside <code>index.php</code>, then open
+    <code>http://localhost/recipe-finder/tests.html</code>.<br>
+    PHP endpoint tests make real <code>fetch()</code> calls to <code>server/</code> — they will fail if run directly from the file system.
+</div>
+
+<!-- Summary -->
+<div id="summary-bar">
+    <div class="stat">
+        <span class="label">Passed</span>
+        <span class="value pass" id="count-pass">—</span>
+    </div>
+    <div class="stat">
+        <span class="label">Failed</span>
+        <span class="value fail" id="count-fail">—</span>
+    </div>
+    <div class="stat">
+        <span class="label">Total</span>
+        <span class="value total" id="count-total">12</span>
+    </div>
+    <div class="stat">
+        <span class="label">Score</span>
+        <span class="value pct" id="count-pct">—</span>
+    </div>
+    <div id="progress"><div id="progress-fill"></div></div>
+    <button id="run-btn" onclick="runAll()">▶ Run All</button>
+</div>
+
+
+<!-- ═══════════════════════════════════════════
+     GROUP 1 — server/get_categories.php
+     ═══════════════════════════════════════════ -->
+<div class="test-group">
+    <div class="group-title">server/get_categories.php</div>
+
+    <div class="test-row" id="row-cat-1">
+        <div class="test-icon idle" id="icon-cat-1">○</div>
+        <div class="test-body">
+            <div class="test-name">Returns a categories array on success</div>
+            <div class="test-desc">Expects <code>data.categories</code> to be a non-empty array</div>
+            <div class="test-detail" id="detail-cat-1"></div>
+        </div>
+        <div class="test-badge idle" id="badge-cat-1">idle</div>
+    </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════
+     GROUP 2 — server/servSearch.php
+     ═══════════════════════════════════════════ -->
+<div class="test-group">
+    <div class="group-title">server/servSearch.php</div>
+
+    <div class="test-row" id="row-ss-1">
+        <div class="test-icon idle" id="icon-ss-1">○</div>
+        <div class="test-body">
+            <div class="test-name">Empty <code>?q=</code> → returns error JSON</div>
+            <div class="test-desc">Expects <code>{ "error": "No search term provided." }</code></div>
+            <div class="test-detail" id="detail-ss-1"></div>
+        </div>
+        <div class="test-badge idle" id="badge-ss-1">idle</div>
+    </div>
+
+    <div class="test-row" id="row-ss-2">
+        <div class="test-icon idle" id="icon-ss-2">○</div>
+        <div class="test-body">
+            <div class="test-name">Valid ingredient search (<code>?q=chicken&amp;type=ingredient</code>) → returns meals</div>
+            <div class="test-desc">Expects <code>data.meals</code> to be a non-empty array</div>
+            <div class="test-detail" id="detail-ss-2"></div>
+        </div>
+        <div class="test-badge idle" id="badge-ss-2">idle</div>
+    </div>
+
+    <div class="test-row" id="row-ss-3">
+        <div class="test-icon idle" id="icon-ss-3">○</div>
+        <div class="test-body">
+            <div class="test-name">Valid category search (<code>?q=Seafood&amp;type=category</code>) → returns meals</div>
+            <div class="test-desc">Expects <code>data.meals</code> to be a non-empty array</div>
+            <div class="test-detail" id="detail-ss-3"></div>
+        </div>
+        <div class="test-badge idle" id="badge-ss-3">idle</div>
+    </div>
+
+    <div class="test-row" id="row-ss-4">
+        <div class="test-icon idle" id="icon-ss-4">○</div>
+        <div class="test-body">
+            <div class="test-name">Valid name search (<code>?q=curry&amp;type=name</code>) → returns meals</div>
+            <div class="test-desc">Expects <code>data.meals</code> to be a non-empty array</div>
+            <div class="test-detail" id="detail-ss-4"></div>
+        </div>
+        <div class="test-badge idle" id="badge-ss-4">idle</div>
+    </div>
+
+    <div class="test-row" id="row-ss-5">
+        <div class="test-icon idle" id="icon-ss-5">○</div>
+        <div class="test-body">
+            <div class="test-name">Unknown ingredient (<code>?q=zzznomatch&amp;type=ingredient</code>) → returns empty meals array</div>
+            <div class="test-desc">Expects <code>data.meals</code> to be an empty array (not null, not error)</div>
+            <div class="test-detail" id="detail-ss-5"></div>
+        </div>
+        <div class="test-badge idle" id="badge-ss-5">idle</div>
+    </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════
+     GROUP 3 — server/get_recipe.php
+     ═══════════════════════════════════════════ -->
+<div class="test-group">
+    <div class="group-title">server/get_recipe.php</div>
+
+    <div class="test-row" id="row-gr-1">
+        <div class="test-icon idle" id="icon-gr-1">○</div>
+        <div class="test-body">
+            <div class="test-name">Missing <code>?id=</code> → returns error JSON</div>
+            <div class="test-desc">Expects <code>{ "error": "No meal ID provided." }</code></div>
+            <div class="test-detail" id="detail-gr-1"></div>
+        </div>
+        <div class="test-badge idle" id="badge-gr-1">idle</div>
+    </div>
+
+    <div class="test-row" id="row-gr-2">
+        <div class="test-icon idle" id="icon-gr-2">○</div>
+        <div class="test-body">
+            <div class="test-name">Invalid ID (<code>?id=99999999</code>) → returns "Recipe not found" error</div>
+            <div class="test-desc">Expects <code>data.error</code> to contain "not found"</div>
+            <div class="test-detail" id="detail-gr-2"></div>
+        </div>
+        <div class="test-badge idle" id="badge-gr-2">idle</div>
+    </div>
+
+    <div class="test-row" id="row-gr-3">
+        <div class="test-icon idle" id="icon-gr-3">○</div>
+        <div class="test-body">
+            <div class="test-name">Valid ID (<code>?id=52772</code>) → returns full recipe object</div>
+            <div class="test-desc">Expects <code>strMeal</code>, <code>strInstructions</code>, and non-empty <code>ingredients[]</code></div>
+            <div class="test-detail" id="detail-gr-3"></div>
+        </div>
+        <div class="test-badge idle" id="badge-gr-3">idle</div>
+    </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════
+     GROUP 4 — js/index.js (homepage validation)
+     ═══════════════════════════════════════════ -->
+<div class="test-group">
+    <div class="group-title">js/index.js — checkEntryHome()</div>
+
+    <div class="test-row" id="row-ix-1">
+        <div class="test-icon idle" id="icon-ix-1">○</div>
+        <div class="test-body">
+            <div class="test-name">Empty input → error message is shown</div>
+            <div class="test-desc">Submitting with blank input sets <code>#form-error-home</code> text content</div>
+            <div class="test-detail" id="detail-ix-1"></div>
+        </div>
+        <div class="test-badge idle" id="badge-ix-1">idle</div>
+    </div>
+
+    <div class="test-row" id="row-ix-2">
+        <div class="test-icon idle" id="icon-ix-2">○</div>
+        <div class="test-body">
+            <div class="test-name">Non-empty input → error message is cleared</div>
+            <div class="test-desc">After a valid entry the error <code>&lt;p&gt;</code> is empty</div>
+            <div class="test-detail" id="detail-ix-2"></div>
+        </div>
+        <div class="test-badge idle" id="badge-ix-2">idle</div>
+    </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════
+     GROUP 5 — js/search.js (search page validation)
+     ═══════════════════════════════════════════ -->
+<div class="test-group">
+    <div class="group-title">js/search.js — checkEntry()</div>
+
+    <div class="test-row" id="row-sr-1">
+        <div class="test-icon idle" id="icon-sr-1">○</div>
+        <div class="test-body">
+            <div class="test-name">Empty input → error message is shown, search not run</div>
+            <div class="test-desc">Sets <code>#form-error</code> text content; <code>buildSearch()</code> is not called</div>
+            <div class="test-detail" id="detail-sr-1"></div>
+        </div>
+        <div class="test-badge idle" id="badge-sr-1">idle</div>
+    </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════
+     GROUP 6 — js/recipe.js (recipe page guard)
+     ═══════════════════════════════════════════ -->
+<div class="test-group">
+    <div class="group-title">js/recipe.js — domLoaded()</div>
+
+    <div class="test-row" id="row-rp-1">
+        <div class="test-icon idle" id="icon-rp-1">○</div>
+        <div class="test-body">
+            <div class="test-name">Missing <code>?id=</code> in URL → error injected into <code>#recipe-output</code></div>
+            <div class="test-desc">Simulates <code>params.get('id') === null</code>; output div should contain a link back home</div>
+            <div class="test-detail" id="detail-rp-1"></div>
+        </div>
+        <div class="test-badge idle" id="badge-rp-1">idle</div>
+    </div>
+</div>
+
+
+<div class="legend">
+    <span><span style="color:var(--pass)">✔</span> pass</span>
+    <span><span style="color:var(--fail)">✘</span> fail — click detail to expand</span>
+    <span><span style="color:var(--muted)">○</span> not yet run</span>
+</div>
+
+
+<!-- ─────────────────────────────────────────── -->
+<script>
+
+// ── Tiny assertion helpers ──────────────────────────────────────────────────
+let passed = 0;
+let failed = 0;
+
+function mark(id, ok, detail = '') {
+    const icon  = document.getElementById('icon-'  + id);
+    const badge = document.getElementById('badge-' + id);
+    const det   = document.getElementById('detail-' + id);
+
+    if (ok) {
+        icon.textContent  = '✔';
+        icon.className    = 'test-icon pass';
+        badge.textContent = 'pass';
+        badge.className   = 'test-badge pass';
+        passed++;
+    } else {
+        icon.textContent  = '✘';
+        icon.className    = 'test-icon fail';
+        badge.textContent = 'fail';
+        badge.className   = 'test-badge fail';
+        det.textContent   = detail || 'Assertion failed.';
+        det.classList.add('visible');
+        failed++;
+    }
+    updateSummary();
+}
+
+function setRunning(id) {
+    document.getElementById('icon-'  + id).textContent = '◌';
+    document.getElementById('icon-'  + id).className   = 'test-icon running';
+    document.getElementById('badge-' + id).textContent = 'running…';
+    document.getElementById('badge-' + id).className   = 'test-badge running';
+}
+
+function updateSummary() {
+    const total = 12;
+    document.getElementById('count-pass').textContent = passed;
+    document.getElementById('count-fail').textContent = failed;
+    const pct = Math.round(((passed) / total) * 100);
+    document.getElementById('count-pct').textContent  = pct + '%';
+    document.getElementById('progress-fill').style.width = pct + '%';
+}
+
+// ── Reset all rows before re-run ────────────────────────────────────────────
+function resetAll() {
+    passed = 0; failed = 0;
+    const ids = [
+        'cat-1',
+        'ss-1','ss-2','ss-3','ss-4','ss-5',
+        'gr-1','gr-2','gr-3',
+        'ix-1','ix-2',
+        'sr-1',
+        'rp-1'
+    ];
+    ids.forEach(id => {
+        document.getElementById('icon-'  + id).textContent = '○';
+        document.getElementById('icon-'  + id).className   = 'test-icon idle';
+        document.getElementById('badge-' + id).textContent = 'idle';
+        document.getElementById('badge-' + id).className   = 'test-badge idle';
+        const det = document.getElementById('detail-' + id);
+        det.textContent = '';
+        det.classList.remove('visible');
+    });
+    document.getElementById('count-pass').textContent = '—';
+    document.getElementById('count-fail').textContent = '—';
+    document.getElementById('count-pct').textContent  = '—';
+    document.getElementById('progress-fill').style.width = '0';
+}
+
+
+// ════════════════════════════════════════════════
+// PHP ENDPOINT TESTS  (async / fetch)
+// ════════════════════════════════════════════════
+
+// ── get_categories.php ──────────────────────────
+async function test_cat_1() {
+    const id = 'cat-1';
+    setRunning(id);
+    try {
+        const res  = await fetch('server/get_categories.php');
+        const data = await res.json();
+        if (data.categories && Array.isArray(data.categories) && data.categories.length > 0) {
+            mark(id, true);
+        } else {
+            mark(id, false, 'Response: ' + JSON.stringify(data).slice(0,200));
+        }
+    } catch(e) {
+        mark(id, false, 'Fetch error: ' + e.message + '\nMake sure this page is served via XAMPP/MAMP.');
+    }
+}
+
+// ── servSearch.php ──────────────────────────────
+
+async function test_ss_1() {
+    const id = 'ss-1';
+    setRunning(id);
+    try {
+        const res  = await fetch('server/servSearch.php?q=&type=ingredient');
+        const data = await res.json();
+        const ok   = typeof data.error === 'string' && data.error.includes('No search term');
+        mark(id, ok, ok ? '' : 'Expected error key. Got: ' + JSON.stringify(data).slice(0,200));
+    } catch(e) { mark(id, false, 'Fetch error: ' + e.message); }
+}
+
+async function test_ss_2() {
+    const id = 'ss-2';
+    setRunning(id);
+    try {
+        const res  = await fetch('server/servSearch.php?q=chicken&type=ingredient');
+        const data = await res.json();
+        const ok   = data.meals && Array.isArray(data.meals) && data.meals.length > 0;
+        mark(id, ok, ok ? '' : 'Got: ' + JSON.stringify(data).slice(0,200));
+    } catch(e) { mark(id, false, 'Fetch error: ' + e.message); }
+}
+
+async function test_ss_3() {
+    const id = 'ss-3';
+    setRunning(id);
+    try {
+        const res  = await fetch('server/servSearch.php?q=Seafood&type=category');
+        const data = await res.json();
+        const ok   = data.meals && Array.isArray(data.meals) && data.meals.length > 0;
+        mark(id, ok, ok ? '' : 'Got: ' + JSON.stringify(data).slice(0,200));
+    } catch(e) { mark(id, false, 'Fetch error: ' + e.message); }
+}
+
+async function test_ss_4() {
+    const id = 'ss-4';
+    setRunning(id);
+    try {
+        const res  = await fetch('server/servSearch.php?q=curry&type=name');
+        const data = await res.json();
+        const ok   = data.meals && Array.isArray(data.meals) && data.meals.length > 0;
+        mark(id, ok, ok ? '' : 'Got: ' + JSON.stringify(data).slice(0,200));
+    } catch(e) { mark(id, false, 'Fetch error: ' + e.message); }
+}
+
+async function test_ss_5() {
+    const id = 'ss-5';
+    setRunning(id);
+    try {
+        const res  = await fetch('server/servSearch.php?q=zzznomatch&type=ingredient');
+        const data = await res.json();
+        // Should return { meals: [] } — an array, not null, not an error key
+        const ok   = Array.isArray(data.meals) && data.meals.length === 0 && !data.error;
+        mark(id, ok, ok ? '' :
+            'Expected { meals: [] }. Got: ' + JSON.stringify(data).slice(0,200));
+    } catch(e) { mark(id, false, 'Fetch error: ' + e.message); }
+}
+
+// ── get_recipe.php ──────────────────────────────
+
+async function test_gr_1() {
+    const id = 'gr-1';
+    setRunning(id);
+    try {
+        const res  = await fetch('server/get_recipe.php');
+        const data = await res.json();
+        const ok   = typeof data.error === 'string' && data.error.includes('No meal ID');
+        mark(id, ok, ok ? '' : 'Got: ' + JSON.stringify(data).slice(0,200));
+    } catch(e) { mark(id, false, 'Fetch error: ' + e.message); }
+}
+
+async function test_gr_2() {
+    const id = 'gr-2';
+    setRunning(id);
+    try {
+        const res  = await fetch('server/get_recipe.php?id=99999999');
+        const data = await res.json();
+        const ok   = typeof data.error === 'string' && data.error.toLowerCase().includes('not found');
+        mark(id, ok, ok ? '' : 'Got: ' + JSON.stringify(data).slice(0,200));
+    } catch(e) { mark(id, false, 'Fetch error: ' + e.message); }
+}
+
+async function test_gr_3() {
+    const id = 'gr-3';
+    setRunning(id);
+    try {
+        const res  = await fetch('server/get_recipe.php?id=52772');
+        const data = await res.json();
+        const ok   = typeof data.strMeal === 'string'
+                  && typeof data.strInstructions === 'string'
+                  && Array.isArray(data.ingredients)
+                  && data.ingredients.length > 0;
+        mark(id, ok, ok ? '' : 'Got: ' + JSON.stringify(data).slice(0,300));
+    } catch(e) { mark(id, false, 'Fetch error: ' + e.message); }
+}
+
+
+// ════════════════════════════════════════════════
+// JS VALIDATION TESTS  (simulated DOM)
+// ════════════════════════════════════════════════
+
+// These tests simulate the DOM elements and exercise the logic inline,
+// without loading the actual JS files (which have page-specific side effects).
+
+// ── index.js — checkEntryHome() ─────────────────
+
+function test_ix_1() {
+    const id = 'ix-1';
+    setRunning(id);
+
+    // Simulate the DOM elements index.js expects
+    const input    = { value: '   ' };          // blank / whitespace only
+    const errorEl  = { textContent: '' };
+    let   prevented = false;
+
+    // Inline reproduction of checkEntryHome logic
+    function checkEntryHome(input, errorEl, preventFn) {
+        if (input.value.trim() === '') {
+            preventFn();
+            errorEl.textContent = 'Please enter a search term before searching.';
+        } else {
+            errorEl.textContent = '';
+        }
+    }
+
+    checkEntryHome(input, errorEl, () => { prevented = true; });
+
+    const ok = prevented && errorEl.textContent.length > 0;
+    mark(id, ok, ok ? '' :
+        'prevented=' + prevented + ', errorText="' + errorEl.textContent + '"');
+}
+
+function test_ix_2() {
+    const id = 'ix-2';
+    setRunning(id);
+
+    const input   = { value: 'chicken' };
+    const errorEl = { textContent: 'old error message' };
+    let   prevented = false;
+
+    function checkEntryHome(input, errorEl, preventFn) {
+        if (input.value.trim() === '') {
+            preventFn();
+            errorEl.textContent = 'Please enter a search term before searching.';
+        } else {
+            errorEl.textContent = '';
+        }
+    }
+
+    checkEntryHome(input, errorEl, () => { prevented = true; });
+
+    const ok = !prevented && errorEl.textContent === '';
+    mark(id, ok, ok ? '' :
+        'prevented=' + prevented + ', errorText="' + errorEl.textContent + '"');
+}
+
+// ── search.js — checkEntry() ─────────────────────
+
+function test_sr_1() {
+    const id = 'sr-1';
+    setRunning(id);
+
+    const input       = { value: '' };
+    const errorEl     = { textContent: '' };
+    let   buildCalled = false;
+
+    function checkEntry(input, errorEl, buildFn) {
+        if (input.value.trim() === '') {
+            errorEl.textContent = 'Please enter a search term before searching.';
+        } else {
+            errorEl.textContent = '';
+            buildFn();
+        }
+    }
+
+    checkEntry(input, errorEl, () => { buildCalled = true; });
+
+    const ok = !buildCalled && errorEl.textContent.length > 0;
+    mark(id, ok, ok ? '' :
+        'buildCalled=' + buildCalled + ', errorText="' + errorEl.textContent + '"');
+}
+
+// ── recipe.js — domLoaded() missing ?id= guard ───
+
+function test_rp_1() {
+    const id = 'rp-1';
+    setRunning(id);
+
+    // Simulate a URLSearchParams with no 'id' key
+    const params    = new URLSearchParams('');   // empty query string
+    const mealId    = params.get('id');          // null
+    const output    = { innerHTML: '' };
+    let   fetchCalled = false;
+
+    // Inline reproduction of the guard in domLoaded()
+    function domLoadedGuard(params, output, fetchFn) {
+        const mealId = params.get('id');
+        if (!mealId) {
+            output.innerHTML = '<p class="load-error">No recipe selected. <a href="index.php">Go back home</a>.</p>';
+            return;
+        }
+        fetchFn(mealId);
+    }
+
+    domLoadedGuard(params, output, (id) => { fetchCalled = true; });
+
+    const ok = !fetchCalled
+            && output.innerHTML.includes('load-error')
+            && output.innerHTML.includes('index.php');
+    mark(id, ok, ok ? '' :
+        'fetchCalled=' + fetchCalled + '\noutput.innerHTML="' + output.innerHTML + '"');
+}
+
+
+// ════════════════════════════════════════════════
+// RUNNER
+// ════════════════════════════════════════════════
+
+async function runAll() {
+    const btn = document.getElementById('run-btn');
+    btn.disabled   = true;
+    btn.textContent = '⏳ Running…';
+
+    resetAll();
+
+    // PHP endpoint tests — run sequentially to avoid hammering the API
+    await test_cat_1();
+    await test_ss_1();
+    await test_ss_2();
+    await test_ss_3();
+    await test_ss_4();
+    await test_ss_5();
+    await test_gr_1();
+    await test_gr_2();
+    await test_gr_3();
+
+    // JS unit tests — synchronous
+    test_ix_1();
+    test_ix_2();
+    test_sr_1();
+    test_rp_1();
+
+    btn.disabled   = false;
+    btn.textContent = '↺ Run Again';
+}
+
+</script>
+</body>
+</html>

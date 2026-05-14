@@ -6,5 +6,5 @@
     <div id="recipe-output"></div>
 
 </main>
-
+<script src="js/recipe.js"></script>
 <?php include 'includes/footer.php'; ?>
